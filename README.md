@@ -39,7 +39,7 @@ This repository contains
 
 ## Usage
 
-See this [blog post](https://xaviergeerinck.com/post/ai/web2text) by Xavier Geerinck with step-by-step instructions on running this code.
+See this [blog post](https://xaviergeerinck.com/2020/01/02/web2text---deep-structured-boilerplate-removal---running-the-code/) by Xavier Geerinck with step-by-step instructions on running this code.
 
 ### Recipe: extracting text from a web page
 
