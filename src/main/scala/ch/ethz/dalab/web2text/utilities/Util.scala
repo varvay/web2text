@@ -159,9 +159,9 @@ object Util {
 
     def randomSplit(splits: Double*): Seq[Seq[T]]  = {
       val n = v.length
-      val running = (splits.scanLeft(0.)(_ + _)).tail
+      val running = splits.scanLeft(0.0)((a, b) => a + b).tail
       val sumSplits = running.last
-      val splitIndices = running map { (x: Double) => (x * n / sumSplits).toInt }
+      val splitIndices = running.map { x => (x * n / sumSplits).toInt }
       assert(splitIndices.last == n)
       val shuffled = Random.shuffle(v)
       ((0+:splitIndices) zip splitIndices) map {

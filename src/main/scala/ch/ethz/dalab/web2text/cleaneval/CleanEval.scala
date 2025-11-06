@@ -137,7 +137,7 @@ object CleanEval {
   def loadCleanFile(path: String, normalize: Boolean = false, isResource: Boolean = false): String = {
     val f = Util.loadFile(path, isResource=isResource)
 
-    val contents = if (f.startsWith("URL:")) f.lines.drop(1).mkString("\n")
+    val contents = if (f.startsWith("URL:")) Source.fromString(f).getLines().drop(1).mkString("\n")
                    else f
 
     if (normalize)

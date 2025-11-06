@@ -8,6 +8,9 @@ from forward import EDGE_VARIABLES, UNARY_VARIABLES, edge, loss, unary
 from shuffle_queue import ShuffleQueue
 from viterbi import viterbi
 
+# Enable TF1 compatibility mode
+tf.compat.v1.disable_v2_behavior()
+
 BATCH_SIZE = 128
 PATCH_SIZE = 9
 N_FEATURES = 128
@@ -63,20 +66,16 @@ def evaluate_unary(dataset, prediction_fn):
   f1 = 2*precision*recall/(precision+recall)
   return accuracy, precision, recall, f1
 
-
 def evaluate_edge(dataset, prediction_fn):
   correct, incorrect = 0, 0
   for doc in dataset:
     predictions = prediction_fn(doc[b'edge_data'])
-
     for i, lab in enumerate(doc[b'edge_labels']):
       if predictions[i] == lab:
         correct += 1
       else:
         incorrect += 1
-
   return float(correct) / (correct + incorrect)
-
 
 def train_unary(conv_weight_decay = REGULARIZATION_STRENGTH):
   from data import cleaneval_test, cleaneval_train, cleaneval_validation
@@ -84,24 +83,24 @@ def train_unary(conv_weight_decay = REGULARIZATION_STRENGTH):
 
   data_shape = [BATCH_SIZE, PATCH_SIZE, 1, N_FEATURES]
   labs_shape = [BATCH_SIZE, PATCH_SIZE, 1, 1]
-  train_features = tf.placeholder(tf.float32, shape=data_shape)
-  train_labels   = tf.placeholder(tf.int64,   shape=labs_shape)
+  train_features = tf.compat.v1.placeholder(tf.float32, shape=data_shape)
+  train_labels   = tf.compat.v1.placeholder(tf.int64,   shape=labs_shape)
 
   logits = unary(train_features,
                  is_training=True,
                  conv_weight_decay=conv_weight_decay,
                  dropout_keep_prob=DROPOUT_KEEP_PROB)
   l = loss(tf.reshape(logits, [-1, 2]), tf.reshape(train_labels, [-1]))
-  train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(l)
+  train_op = tf.compat.v1.train.AdamOptimizer(LEARNING_RATE).minimize(l)
 
-  test_features = tf.placeholder(tf.float32)
-  tf.get_variable_scope().reuse_variables()
+  test_features = tf.compat.v1.placeholder(tf.float32)
+  tf.compat.v1.get_variable_scope().reuse_variables()
   test_logits = unary(test_features, is_training=False)
 
-  saver = tf.train.Saver(tf.get_collection(UNARY_VARIABLES))
-  init_op = tf.global_variables_initializer()
+  saver = tf.compat.v1.train.Saver(tf.compat.v1.get_collection(UNARY_VARIABLES))
+  init_op = tf.compat.v1.global_variables_initializer()
 
-  with tf.Session() as session:
+  with tf.compat.v1.Session() as session:
     # Initialize
     session.run(init_op)
 
@@ -119,7 +118,6 @@ def train_unary(conv_weight_decay = REGULARIZATION_STRENGTH):
         [l, train_op],
         feed_dict={train_features: features, train_labels: labels}
       )
-
       if step % 100 == 0:
         _,_,_,f1_validation = evaluate_unary(cleaneval_validation, prediction)
         _,_,_,f1_train = evaluate_unary(cleaneval_train, prediction)
@@ -133,31 +131,30 @@ def train_unary(conv_weight_decay = REGULARIZATION_STRENGTH):
     # saver.save(session, os.path.join(CHECKPOINT_DIR, 'unary.ckpt'))
     return f1_validation
 
-
 def train_edge(conv_weight_decay = REGULARIZATION_STRENGTH):
   from data import cleaneval_test, cleaneval_train, cleaneval_validation
   training_queue = ShuffleQueue(cleaneval_train)
 
   data_shape = [BATCH_SIZE, PATCH_SIZE-1, 1, N_EDGE_FEATURES]
   labs_shape = [BATCH_SIZE, PATCH_SIZE-1, 1, 1]
-  train_features = tf.placeholder(tf.float32, shape=data_shape)
-  train_labels   = tf.placeholder(tf.int64,   shape=labs_shape)
+  train_features = tf.compat.v1.placeholder(tf.float32, shape=data_shape)
+  train_labels   = tf.compat.v1.placeholder(tf.int64,   shape=labs_shape)
 
   logits = edge(train_features,
                 is_training=True,
                 conv_weight_decay=conv_weight_decay,
                 dropout_keep_prob=DROPOUT_KEEP_PROB)
   l = loss(tf.reshape(logits, [-1, 4]), tf.reshape(train_labels, [-1]))
-  train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(l)
+  train_op = tf.compat.v1.train.AdamOptimizer(LEARNING_RATE).minimize(l)
 
-  test_features = tf.placeholder(tf.float32)
-  tf.get_variable_scope().reuse_variables()
+  test_features = tf.compat.v1.placeholder(tf.float32)
+  tf.compat.v1.get_variable_scope().reuse_variables()
   test_logits = edge(test_features, is_training=False)
 
-  saver = tf.train.Saver(tf.get_collection(EDGE_VARIABLES))
-  init_op = tf.global_variables_initializer()
+  saver = tf.compat.v1.train.Saver(tf.compat.v1.get_collection(EDGE_VARIABLES))
+  init_op = tf.compat.v1.global_variables_initializer()
 
-  with tf.Session() as session:
+  with tf.compat.v1.Session() as session:
     # Initialize
     session.run(init_op)
 
@@ -175,8 +172,6 @@ def train_edge(conv_weight_decay = REGULARIZATION_STRENGTH):
         [l, train_op],
         feed_dict={train_features: edge_features, train_labels: edge_labels}
       )
-
-
       if step % 100 == 0:
         accuracy_validation = evaluate_edge(cleaneval_validation, prediction)
         accuracy_train = evaluate_edge(cleaneval_train, prediction)
@@ -190,33 +185,29 @@ def train_edge(conv_weight_decay = REGULARIZATION_STRENGTH):
     # saver.save(session, os.path.join(CHECKPOINT_DIR, 'edge.ckpt'))
     return accuracy_validation
 
-
 def test_structured(lamb=EDGE_LAMBDA):
   from data import cleaneval_test, cleaneval_train, cleaneval_validation
-  unary_features = tf.placeholder(tf.float32)
-  edge_features  = tf.placeholder(tf.float32)
+  unary_features = tf.compat.v1.placeholder(tf.float32)
+  edge_features  = tf.compat.v1.placeholder(tf.float32)
 
   # hack to get the right shape weights
-  _ = unary(tf.placeholder(tf.float32, shape=[1,PATCH_SIZE,1,N_FEATURES]), False)
-  _ = edge(tf.placeholder(tf.float32, shape=[1,PATCH_SIZE,1,N_EDGE_FEATURES]), False)
+  _ = unary(tf.compat.v1.placeholder(tf.float32, shape=[1,PATCH_SIZE,1,N_FEATURES]), False)
+  _ = edge(tf.compat.v1.placeholder(tf.float32, shape=[1,PATCH_SIZE,1,N_EDGE_FEATURES]), False)
 
-  tf.get_variable_scope().reuse_variables()
+  tf.compat.v1.get_variable_scope().reuse_variables()
   unary_logits = unary(unary_features, is_training=False)
   edge_logits  = edge(edge_features, is_training=False)
 
-  unary_saver = tf.train.Saver(tf.get_collection(UNARY_VARIABLES))
-  edge_saver  = tf.train.Saver(tf.get_collection(EDGE_VARIABLES))
+  unary_saver = tf.compat.v1.train.Saver(tf.compat.v1.get_collection(UNARY_VARIABLES))
+  edge_saver  = tf.compat.v1.train.Saver(tf.compat.v1.get_collection(EDGE_VARIABLES))
+  init_op = tf.compat.v1.global_variables_initializer()
 
-  init_op = tf.global_variables_initializer()
-
-  with tf.Session() as session:
+  with tf.compat.v1.Session() as session:
     session.run(init_op)
     unary_saver.restore(session, os.path.join(CHECKPOINT_DIR, "unary.ckpt"))
     edge_saver.restore(session, os.path.join(CHECKPOINT_DIR, "edge.ckpt"))
 
-    from time import time
-
-    start = time()
+    start = time.time()
     def prediction_structured(features, edge_feat):
       features  = features[np.newaxis, :, np.newaxis, :]
       edge_feat = edge_feat[np.newaxis, :, np.newaxis, :]
@@ -233,12 +224,11 @@ def test_structured(lamb=EDGE_LAMBDA):
 
     accuracy, precision, recall, f1 = evaluate_unary(cleaneval_test, prediction_structured)
     accuracy_u, precision_u, recall_u, f1_u = evaluate_unary(cleaneval_test, prediction_unary)
-    end = time()
+    end = time.time()
     print('duration', end-start)
     print('size', len(cleaneval_test))
     print("Structured: Accuracy=%.5f, precision=%.5f, recall=%.5f, F1=%.5f" % (accuracy, precision, recall, f1))
     print("Just unary: Accuracy=%.5f, precision=%.5f, recall=%.5f, F1=%.5f" % (accuracy_u, precision_u, recall_u, f1_u))
-
 
 def classify(block_features_file, edge_features_file, labels_output_file, lamb=EDGE_LAMBDA):
   block_features = np.genfromtxt(block_features_file, delimiter=',')
@@ -254,31 +244,26 @@ def classify(block_features_file, edge_features_file, labels_output_file, lamb=E
   unary_logits = unary(unary_features, is_training=False)
   edge_logits  = edge(edge_features, is_training=False)
 
-  unary_saver = tf.train.Saver(tf.get_collection(UNARY_VARIABLES))
-  edge_saver  = tf.train.Saver(tf.get_collection(EDGE_VARIABLES))
+  unary_saver = tf.compat.v1.train.Saver(tf.compat.v1.get_collection(UNARY_VARIABLES))
+  edge_saver  = tf.compat.v1.train.Saver(tf.compat.v1.get_collection(EDGE_VARIABLES))
+  init_op = tf.compat.v1.global_variables_initializer()
 
-  init_op = tf.global_variables_initializer()
-
-  with tf.Session() as session:
+  with tf.compat.v1.Session() as session:
     session.run(init_op)
     unary_saver.restore(session, os.path.join(CHECKPOINT_DIR, "unary.ckpt"))
     edge_saver.restore(session, os.path.join(CHECKPOINT_DIR, "edge.ckpt"))
 
-    from time import time
-    start = time()
-
+    start = time.time()
     unary_lgts = session.run(unary_logits)
     edge_lgts = session.run(edge_logits)
 
     labels = viterbi(unary_lgts.reshape([-1,2]), edge_lgts.reshape([-1,4]), lam=lamb).astype(np.int32)
 
-    duration = time() - start
+    duration = time.time() - start
     print("Done. Classification took %.2f seconds " % duration)
     with open(labels_output_file, 'w') as fp:
       fp.write(",".join('%d' % label for label in labels))
     print('CSV labels written to %s' % labels_output_file)
-
-
 
 def get_batch(q, batch_size=BATCH_SIZE, patch_size=PATCH_SIZE):
   """Takes a batch from a ShuffleQueue of documents"""
@@ -289,7 +274,6 @@ def get_batch(q, batch_size=BATCH_SIZE, patch_size=PATCH_SIZE):
   edge_batch  = np.zeros((BATCH_SIZE, PATCH_SIZE-1, 1, N_EDGE_FEATURES), dtype = np.float32)
   edge_labels = np.zeros((BATCH_SIZE, PATCH_SIZE-1, 1, 1), dtype = np.int64)
 
-
   for entry in range(BATCH_SIZE):
     # Find an entry that is long enough (at least one patch size)
     while True:
@@ -299,13 +283,11 @@ def get_batch(q, batch_size=BATCH_SIZE, patch_size=PATCH_SIZE):
         break
 
     # Select a random patch
-    i = np.random.random_integers(length-PATCH_SIZE-1)
-
-    # Add it to the tensors
+    i = np.random.randint(length-PATCH_SIZE-1)
     batch[entry,:,0,:]       = doc[b'data'][i:i+PATCH_SIZE,:]
     edge_batch[entry,:,0,:]  = doc[b'edge_data'][i:i+PATCH_SIZE-1,:]
-    labels[entry,:,0,0]      = doc[b'labels'][i:i+PATCH_SIZE] # {0,1}
-    edge_labels[entry,:,0,0] = doc[b'edge_labels'][i:i+PATCH_SIZE-1] # {0,1,2,3} = {00,01,10,11}
+    labels[entry,:,0,0]      = doc[b'labels'][i:i+PATCH_SIZE]
+    edge_labels[entry,:,0,0] = doc[b'edge_labels'][i:i+PATCH_SIZE-1]
 
   return batch, edge_batch, labels, edge_labels
 

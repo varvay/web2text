@@ -1,5 +1,7 @@
 package ch.ethz.dalab.web2text.cdom
 
+import scala.io.Source
+
 /** A CDOM Node, including node level features
   *
   * @author Thijs Vogels <t.vogels@me.com>
@@ -36,7 +38,10 @@ class Node {
   /** To string function */
   override def toString = {
     val tagStr = (tags mkString "/")
-    val c = for (c <- children; l <- c.toString.lines) yield {"  " + l}
+    val c = for {
+      ch: Node <- children
+      l <- Source.fromString(ch.toString).getLines()
+    } yield "  " + l
     (tagStr :: c.toList).mkString("\n")
   }
 

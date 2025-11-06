@@ -1,20 +1,21 @@
 # This is a variable scope aware configuation object for TensorFlow
 # Source: https://github.com/ry/tensorflow-resnet/blob/master/config.py
 
+import argparse
 import tensorflow as tf
 from future.utils import iteritems
 import sys
 
-FLAGS = tf.app.flags.FLAGS
-FLAGS(sys.argv)
+parser = argparse.ArgumentParser()
 
+FLAGS, _ = parser.parse_known_args()
 
 class Config:
     def __init__(self):
         root = self.Scope('')
-        for k in FLAGS.__dict__['__wrapped']:
-            root[k] = FLAGS.__getattr__(k)
-        self.stack = [ root ]
+        for k, v in vars(FLAGS).items():
+            root[k] = v
+        self.stack = [root]
 
     def iteritems(self):
         return self.to_dict().iteritems()
@@ -31,7 +32,7 @@ class Config:
         return out
 
     def _pop_stale(self):
-        var_scope_name = tf.get_variable_scope().name
+        var_scope_name = tf.compat.v1.get_variable_scope().name
         top = self.stack[0]
         while not top.contains(var_scope_name):
             # We aren't in this scope anymore
@@ -63,7 +64,7 @@ class Config:
     def __setitem__(self, name, value):
         self._pop_stale()
         top = self.stack[0]
-        var_scope_name = tf.get_variable_scope().name
+        var_scope_name = tf.compat.v1.get_variable_scope().name
         assert top.contains(var_scope_name)
 
         if top.name != var_scope_name:

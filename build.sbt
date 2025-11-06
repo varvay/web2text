@@ -4,7 +4,7 @@ organization := "nl.tvogels"
 
 version:= "2.0-SNAPSHOT"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.12"
 
 cancelable in Global := true
 fork in run := true

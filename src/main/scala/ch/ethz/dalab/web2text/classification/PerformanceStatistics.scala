@@ -15,8 +15,12 @@ object PerformanceStatistics {
     * @return PerformanceStatistics */
   def fromPairs(pairs: Seq[(Int,Int)]): PerformanceStatistics = {
     val n = pairs.length
-    var truePos, falsePos, trueNeg, falseNeg = 0.
-    pairs foreach {
+    var truePos  : Int = 0
+    var falsePos : Int = 0
+    var falseNeg : Int = 0
+    var trueNeg  : Int = 0
+
+    pairs.foreach {
       case (1,1) => truePos  += 1
       case (1,0) => falsePos += 1
       case (0,1) => falseNeg += 1
