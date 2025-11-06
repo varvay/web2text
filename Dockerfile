@@ -56,23 +56,9 @@ COPY . /app
 # ===============================
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install future
-# RUN pip install --no-cache-dir numpy==1.24.3 tensorflow==2.13.0 future
-
-# Install Python dependencies
-# (Assuming there's a requirements.txt or setup.py in repo)
-# RUN if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
 # ===============================
-# Build the C++ components
+# Set up Web2Text CLI app
 # ===============================
-# RUN mkdir -p build && cd build && cmake .. && make -j$(nproc)
-
-# ===============================
-# Set environment variables
-# ===============================
-# ENV PYTHONPATH=/app/src
-
-# ===============================
-# Default command
-# ===============================
-# CMD ["python3", "src/main.py"]
+RUN ln -sf /app/src/main/cli/web2text_cli.py /usr/local/bin/web2text
+RUN chmod +x /usr/local/bin/web2text

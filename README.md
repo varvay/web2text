@@ -1,152 +1,36 @@
 # Web2Text
 
-Source code for [Web2Text: Deep Structured Boilerplate Removal](https://arxiv.org/abs/1801.02607), full paper at ECIR '18 
+Source code for [Web2Text: Deep Structured Boilerplate Removal](https://arxiv.org/abs/1801.02607), full paper at ECIR '18. This fork of [Dalab • Web2Text](https://github.com/dalab/web2text) introduce docker-ready set up and code adjustment for newer engines.
 
 ## Introduction
 
-This repository contains 
+This document only contains topic around the enhancement of the original code. Read [Dalab • Web2Text](https://github.com/dalab/web2text) for further details.
 
-* Scala code to parse an (X)HTML document into a DOM tree, convert it to a CDOM tree, interpret tree leaves as a sequence of text blocks and extract features for each of these blocks. 
+This fork contains the following enhancements:
 
-* Python code to train and evaluate unary and pairwise CNNs on top of these features. Inference on the hidden Markov model based on the CNN output potentials can be executed using the provided implementation of the Viterbi algorithm.
+* Code adjustment for newer engines i.e., TensorFlow 2, Python 3, and Scala 2.11, by utilizing TensorFlow 2 backward compatibility API.
+* Docker-ready set up by providing preconfigured Dockerfile.
+* New CLI app to execute Web2Text tasks e.g., feature extraction, extracted feature classification and label application.
 
-* The [CleanEval](https://cleaneval.sigwac.org.uk) dataset under `src/main/resources/cleaneval/`:
-    - `orig`: raw pages
-    - `clean`: reference clean pages
-    - `aligned`: clean content aligned with the corresponding raw page on a per-character basis using the alignment algorithm described in our paper
+This fork also come with known limitations:
 
-* Output from various other webpage cleaners on CleanEval under `other_frameworks/output`:
-    - [Body Text Extractor](https://www.researchgate.net/publication/2376126_Fact_or_fiction_Content_classification_for_digital_libraries) (Finn et al., 2001)
-    - [Boilerpipe](https://github.com/janih/boilerpipe) (Kohlschütter et al., 2010): default-extractor, article-extractor, largestcontent-extractor
-    - [Unfluff](https://github.com/ageitgey/node-unfluff) (Geitgey, 2014)
-    - [Victor](https://pdfs.semanticscholar.org/5462/d15610592394a5cd305d44003cc89630f990.pdf) (Spousta et al., 2008)
+* Incompatibility with NVidia Cuda. TensorFlow running on CPU instead of utilizing GPU. Possible solution to this is by [installing the NVidia Cuda Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) into the Docker image.
 
+## Installation Prerequisites
 
+* [x] **Mandatory** • Docker engine installed and running.
 
 ## Installation
 
-1. Install [Scala and SBT](http://www.scala-sbt.org/download.html). The code was tested with SBT 1.3.3. You can also use Docker image `hseeberger/scala-sbt:8u222_1.3.3_2.13.1`.
-    * if you struggle installing Scala and SBT, you can run our Scala code in Docker with commands like
-    ```
-    docker run -it --rm \
-        --mount type=bind,source="$(pwd)",target=/root \
-        hseeberger/scala-sbt:8u222_1.3.3_2.13.1 \
-        sbt "runMain ch.ethz.dalab.web2text.ExtractPageFeatures result/input.html result/step_1_extracted_features"
-    ```
-
-2. Install Python 3.7 with Tensorflow 1.15 and NumPy.
-
+Build Docker image by executing `docker build -t web2text .`
 
 ## Usage
 
-See this [blog post](https://xaviergeerinck.com/2020/01/02/web2text---deep-structured-boilerplate-removal---running-the-code/) by Xavier Geerinck with step-by-step instructions on running this code.
+1. Run a Docker container and enter the bash terminal by executing `docker run -it --rm -v ./io:/app/io web2text bash`. The `io/` directory mounted so that the input / output files can be read and modified from outside the container and without image rebuild.
+2. The CLI app is available through `web2text` command. Try `web2text -h` to read on the CLI app usage, including feature extraction and clasification, and label application.
 
-### Recipe: extracting text from a web page
+Here are some examples of the CLI app usage,
 
-1. Run `ch.ethz.dalab.web2text.ExtractPageFeatures` through sbt. The arguments are:
-    * input html file
-    * the desired output base filename (script produces `{filename_base}_edge_feature.csv` and `{filename_base}_block_features.csv`)
-2. Use the python script `src/main/python.py` with the 'classify' option. The arguments are:
-    * `python3 main.py classify {filename_base} {labels_out_filename}`
-2. Use `ch.ethz.dalab.web2text.ApplyLabelsToPage` through sbt to produce clean text. Arguments:
-    * input html file
-    * `{labels_out_filename}` from step 2
-    * output destination text file path
-
-
-### HTML to CDOM
-
-In Scala:
-
-```scala
-import ch.ethz.dalab.web2text.cdom.CDOM
-val cdom = CDOM.fromHTML("""
-    <body>
-        <h1>Header</h1>
-        <p>Paragraph with an <i>Italic</i> section.</p>
-    </body>
-    """)
-println(cdom)
-```
-
-### Feature extraction
-
-Example:
-```scala
-import ch.ethz.dalab.web2text.features.{FeatureExtractor, PageFeatures}
-import ch.ethz.dalab.web2text.features.extractor._
-
-val unaryExtractor = 
-    DuplicateCountsExtractor
-    + LeafBlockExtractor
-    + AncestorExtractor(NodeBlockExtractor + TagExtractor(mode="node"), 1)
-    + AncestorExtractor(NodeBlockExtractor, 2)
-    + RootExtractor(NodeBlockExtractor)
-    + TagExtractor(mode="leaf")
-
-val pairwiseExtractor = 
-    TreeDistanceExtractor + 
-    BlockBreakExtractor + 
-    CommonAncestorExtractor(NodeBlockExtractor)
-
-val extractor = FeatureExtractor(unaryExtractor, pairwiseExtractor)
-
-val features: PageFeatures = extractor(cdom)
-
-println(features)
-```
-
-### Aligning cleaned text with original source
-
-```scala
-import ch.ethz.dalab.web2text.alignment.Alignment
-val reference = "keep this"
-val source = "You should keep this text"
-val alignment: String = Alignment.alignment(source, reference) 
-println(alignment) // □□□□□□□□□□□keep this□□□□□
-```
-### Extracting features for CleanEval
-
-```scala
-import ch.ethz.dalab.web2text.utilities.Util
-import ch.ethz.dalab.web2text.cleaneval.CleanEval
-import ch.ethz.dalab.web2text.output.CsvDatasetWriter
-
-val data = Util.time{ CleanEval.dataset(fe) }
-
-// Write block_features.csv and edge_features.csv
-// Format of a row: page id, groundtruth label (1/0), features ...
-CsvDatasetWriter.write(data, "./src/main/python/data")
-
-// Print the names of the exported features in order
-println("# Block features")
-fe.blockExtractor.labels.foreach(println)
-println("# Edge features")
-fe.edgeExtractor.labels.foreach(println)
-```
-
-### Training the CNNs
-
-Code related to the CNNs lives in the `src/main/python` directory. 
-
-To train the CNNs:
-
-1. Set the `CHECKPOINT_DIR` variable in `main.py`.
-2. Make sure the files `block_features.csv` and `edge_features.csv` are in the `src/main/python/data` directory. Use the example from the previous section for this.
-3. Convert the CSV files to `.npy` with `data/convert_scala_csv.py`.
-3. Train the unary CNN with `python3 main.py train_unary`.
-4. Train the pairwise CNN with `python3 main.py train_edge`.
-
-### Evaluating the CNN
-
-To evaluate the CNN:
-
-1. Set the `CHECKPOINT_DIR` variable in `main.py` to point to a directory with trained weights. We provide trained weights based on the cleaneval split and a custom web2text split (with more training data.)
-2. Run `python3 main.py test_structured` to test performance on the CleanEval test set.
-
-The performance of other networks is computed in Scala:
-
-```scala
-import ch.ethz.dalab.web2text.Main
-Main.evaluateOthers()
-```
+* **extract** • `web2text extract io/input.xhtml io/step_1_extracted_features`
+* **classify** • `web2text classify io/step_1_extracted_features io/step_2_classified_labels`
+* **apply** • `web2text apply io/input.xhtml io/step_2_classified_labels io/step_3_applied_labels`
