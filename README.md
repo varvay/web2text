@@ -2,6 +2,14 @@
 
 Source code for [Web2Text: Deep Structured Boilerplate Removal](https://arxiv.org/abs/1801.02607), full paper at ECIR '18. This fork of [Dalab • Web2Text](https://github.com/dalab/web2text) introduce docker-ready set up and code adjustment for newer engines.
 
+## Table of Contents
+- [Web2Text](#web2text)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation Prerequisites](#installation-prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+
 ## Introduction
 
 This document only contains topic around the enhancement of the original code. Read [Dalab • Web2Text](https://github.com/dalab/web2text) for further details.
