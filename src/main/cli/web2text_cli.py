@@ -22,14 +22,18 @@ def classify(feature_base: str, labels_output: str):
     """Run the classification step."""
     run_command(f'python3 src/main/python/main.py classify {feature_base} {labels_output}')
 
-def apply_labels(input_html: str, labels_file: str, output_file: str):
+def apply_labels(input_html: str, labels_file: str, output_file: str, is_clean: bool):
     """Apply predicted labels back to the HTML."""
-    run_command(f'sbt "runMain ch.ethz.dalab.web2text.ApplyLabelsToPage {input_html} {labels_file} {output_file}"')
+    run_command(f'sbt "runMain ch.ethz.dalab.web2text.ApplyLabelsToPage {input_html} {labels_file} {output_file} {is_clean}"')
+
+def visualize_cdom(input_html: str):
+    """Generate an HTML file that visually shows the CDOM tree."""
+    run_command(f'sbt "runMain ch.ethz.dalab.web2text.VisualizeCDOM {input_html}"')
 
 def main():
     parser = argparse.ArgumentParser(
         prog="web2text",
-        description="Web2Text CLI — run extraction, classification, or apply labels."
+        description="Web2Text CLI."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -48,6 +52,11 @@ def main():
     apply_parser.add_argument("input_html", help="Input HTML file")
     apply_parser.add_argument("labels_file", help="Path to classified labels file (CSV)")
     apply_parser.add_argument("output_file", help="Output HTML file with labels applied")
+    apply_parser.add_argument("is_clean", help="Indicate whether to output clean or labeled text")
+
+    # 3️⃣ Visualize CDOM command
+    visualize_cdom_parser = subparsers.add_parser("visualize-cdom", help="Generate an HTML file that visually shows the CDOM tree")
+    visualize_cdom_parser.add_argument("input_html", help="Input HTML file")
 
     args = parser.parse_args()
 
@@ -56,7 +65,9 @@ def main():
     elif args.command == "classify":
         classify(args.feature_base, args.labels_output)
     elif args.command == "apply":
-        apply_labels(args.input_html, args.labels_file, args.output_file)
+        apply_labels(args.input_html, args.labels_file, args.output_file, args.is_clean)
+    elif args.command == "visualize-cdom":
+        visualize_cdom(args.input_html)
     else:
         parser.print_help()
 

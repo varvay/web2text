@@ -39,6 +39,6 @@ Build Docker image by executing `docker build -t web2text .`
 
 Here are some examples of the CLI app usage,
 
-* **extract** • `web2text extract io/input.xhtml io/step_1_extracted_features`
+* **extract** • `web2text extract io/input.html io/step_1_extracted_features`
 * **classify** • `web2text classify io/step_1_extracted_features io/step_2_classified_labels`
-* **apply** • `web2text apply io/input.xhtml io/step_2_classified_labels io/step_3_applied_labels`
+* **apply** • `web2text apply io/input.html io/step_2_classified_labels io/step_3_applied_labels true`

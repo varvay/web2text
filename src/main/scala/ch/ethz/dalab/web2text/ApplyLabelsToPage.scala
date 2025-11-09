@@ -7,6 +7,7 @@ import ch.ethz.dalab.web2text.features.extractor._
 import ch.ethz.dalab.web2text.features.FeatureExtractor
 import ch.ethz.dalab.web2text.utilities.Util
 import ch.ethz.dalab.web2text.output.CleanTextOutput
+import ch.ethz.dalab.web2text.output.LabeledTextOutput
 
 
 /**
@@ -21,13 +22,24 @@ object ApplyLabelsToPage {
   def main(args: Array[String]): Unit = {
     // Command line argument: path to HTML file
     if (args.length < 3) {
-      throw new IllegalArgumentException("Expecting arguments: (1) input html file, (2) labels in csv, (3) output file")
+      throw new IllegalArgumentException("Expecting arguments: (1) input html file, (2) labels in csv, (3) output file, (4) optional, clean / labeled output format")
     }
+
+    val isClean =
+      if (args.length >= 4) {
+        args(3).trim.toLowerCase match {
+          case "true"  => true
+          case "false" => false
+          case _       => throw new IllegalArgumentException("Fourth argument must be 'true' or 'false' indicating whether to output clean text or labeled text.")
+        }
+      }
+      else true
+
     val labels = Util.loadFile(args(1)).split(",").map(_.toInt)
-    applyLabelsToPage(args(0), labels, args(2))
+    applyLabelsToPage(args(0), labels, args(2), isClean)
   }
 
-  def applyLabelsToPage(filename: String, labels: Seq[Int], output: String) = {
+  def applyLabelsToPage(filename: String, labels: Seq[Int], output: String, isClean: Boolean = true) = {
     val featureExtractor = FeatureExtractor(
       DuplicateCountsExtractor
       + LeafBlockExtractor
@@ -40,6 +52,10 @@ object ApplyLabelsToPage {
 
     val source = Source.fromFile(filename).getLines.mkString
     val cdom = CDOM(source)
-    Util.save(output, CleanTextOutput(cdom, labels))
+    if (isClean) {
+      Util.save(output, CleanTextOutput.apply(cdom, labels))
+    } else {
+      Util.save(output, LabeledTextOutput.apply(cdom, labels))
+    }
   }
 }
